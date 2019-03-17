@@ -7,7 +7,7 @@ Public Class LogEngine
     Private _userData As New List(Of String())
     Private LogQueue As New Queue(Of String())
     Private _endLog As Boolean = False
-    Private _logPath As String
+    Property LogPath As String
     Private _userPath As String
     Private _logging As Boolean
     Private _defaultUser As String
