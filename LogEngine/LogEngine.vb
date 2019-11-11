@@ -13,6 +13,7 @@ Public Class LogEngine
     Private _defaultUser As String
     Private _Debug As Boolean
     Private _maxLogLenght As Integer = 8000
+    Private _verbose As Boolean = False
     Property Codename As String
 #End Region
 
@@ -25,6 +26,15 @@ Public Class LogEngine
     Public ReadOnly Property Logdata() As List(Of String())
         Get
             Return _logData
+        End Get
+    End Property
+    ''' <summary>
+    ''' Indica si está en modo verboso.
+    ''' </summary>
+    ''' <returns></returns>
+    Public ReadOnly Property Verbose() As Boolean
+        Get
+            Return _verbose
         End Get
     End Property
     ''' <summary>
@@ -66,11 +76,12 @@ Public Class LogEngine
     ''' </summary>
     ''' <param name="LogPath">Archivo con ruta donde se guardará el archivo de LOG.</param>
     ''' <param name="UserPath">Archivo con ruta donde se guardará el archivo de usuarios.</param>
-    Public Sub New(ByVal LogPath As String, ByVal UserPath As String, ByVal DefaultUser As String)
+    Public Sub New(ByVal LogPath As String, ByVal UserPath As String, ByVal DefaultUser As String, ByVal VerboseMode As Boolean)
         _Debug = False
-        _logPath = LogPath
+        _LogPath = LogPath
         _userPath = UserPath
         _defaultUser = DefaultUser
+        _verbose = VerboseMode
         Task.Run(Sub()
                      Do Until _endLog
                          SaveLogWorker()
@@ -133,7 +144,7 @@ Public Class LogEngine
     ''' <returns></returns>
     Public Function Log(ByVal message As String, ByVal source As String, ByVal user As String) As Boolean
         AddEvent(message, source, user, "LOG")
-        WriteLine("LOG", source, user & ": " & message)
+        If _verbose Then WriteLine("LOG", source, user & ": " & message)
         Return True
     End Function
 
@@ -148,7 +159,7 @@ Public Class LogEngine
         If _Debug Then
             AddEvent(message, source, user, "DEBUG")
         End If
-        WriteLine("DEBUG", source, user & ": " & message)
+        If _verbose Then WriteLine("DEBUG", source, user & ": " & message)
         Return True
     End Function
 
@@ -339,6 +350,8 @@ Public Class LogEngine
     Private Function AddEvent(ByVal text As String, Source As String, User As String, Type As String) As Boolean
         Dim CurrDate As String = Date.Now().ToString("dd/MM/yyyy HH:mm:ss")
         text = PsvSafeEncode(text)
+        Source = PsvSafeEncode(Source)
+        User = PsvSafeEncode(Type)
         SafeEnqueue(LogQueue, {CurrDate, text, Source, User, Type})
         Return True
     End Function
