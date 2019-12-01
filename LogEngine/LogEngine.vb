@@ -1,5 +1,6 @@
 ﻿Option Strict On
 Option Explicit On
+Imports System.IO
 
 Public Class LogEngine
 
@@ -305,7 +306,7 @@ Public Class LogEngine
     ''' Guarda los datos en el archivo de log, es llamado por otros threads.
     ''' </summary>
     Private Sub SaveLogWorker()
-        SaveData(_logPath, LogQueue)
+        SaveData(LogQueue)
         SyncLock (_logData)
             If _logData.Count > 100 Then
                 _logData.RemoveRange(0, 99)
@@ -319,24 +320,44 @@ Public Class LogEngine
     ''' <param name="filepath"></param>
     ''' <param name="_queue"></param>
     ''' <returns></returns>
-    Private Function SaveData(ByVal filepath As String, ByRef _queue As Queue(Of String())) As Boolean
-        If String.IsNullOrWhiteSpace(filepath) Then Return False
-        Try
-            Do Until _queue.Count = 0
-                AppendLinesToText(filepath, SafeDequeue(_queue))
-                Threading.Thread.Sleep(10)
-            Loop
-
-            Dim totallines As String() = IO.File.ReadAllLines(filepath)
-            If totallines.Count > _maxLogLenght Then
-                Dim newarr As String() = GetSubArray(totallines, totallines.Count - _maxLogLenght)
-                IO.File.WriteAllLines(filepath, newarr)
-            End If
-            Return True
-        Catch ex As IO.IOException
-            EX_Log(ex.Message, Reflection.MethodBase.GetCurrentMethod().Name, _defaultUser)
-            Return False
-        End Try
+    Private Function SaveData(ByRef _queue As Queue(Of String())) As Boolean
+        If String.IsNullOrWhiteSpace(_LogPath) Then Return False
+        SyncLock _LogPath
+            SyncLock _queue
+                Try
+                    Do Until _queue.Count = 0
+                        Dim tlines As String() = SafeDequeue(_queue)
+                        Try
+                            AppendLinesToText(_LogPath, tlines)
+                            Threading.Thread.Sleep(20)
+                        Catch ex As IOException
+                            SafeEnqueue(_queue, tlines)
+                            Threading.Thread.Sleep(50)
+                        End Try
+                    Loop
+                    Dim totallines As String() = Array.Empty(Of String)
+                    For i As Integer = 0 To 5
+                        Try
+                            totallines = IO.File.ReadAllLines(_LogPath)
+                            Exit For
+                        Catch ex As IOException
+                            If i = 5 Then
+                                Throw ex
+                            End If
+                            Threading.Thread.Sleep(10)
+                        End Try
+                    Next
+                    If totallines.Count > _maxLogLenght Then
+                        Dim newarr As String() = GetSubArray(totallines, totallines.Count - _maxLogLenght)
+                        IO.File.WriteAllLines(_LogPath, newarr)
+                    End If
+                    Return True
+                Catch ex As Exception
+                    EX_Log(ex.Message, Reflection.MethodBase.GetCurrentMethod().Name, _defaultUser)
+                    Return False
+                End Try
+            End SyncLock
+        End SyncLock
     End Function
 
     ''' <summary>
@@ -380,14 +401,16 @@ Public Class LogEngine
             If Not IO.File.Exists(FilePath) Then
                 IO.File.Create(FilePath).Close()
             End If
-            Using Writer As New IO.StreamWriter(FilePath, True)
+            Dim Writer As New IO.StreamWriter(FilePath, True)
+            SyncLock Writer
                 Dim LineStr As String = String.Empty
                 For Each item As String In Lines
                     LineStr = LineStr & item & "|"
                 Next
                 LineStr = LineStr.Trim(CType("|", Char))
                 Writer.WriteLine(LineStr)
-            End Using
+                Writer.Dispose()
+            End SyncLock
             Return True
         Catch ex As IO.IOException
             Debug_Log(Reflection.MethodBase.GetCurrentMethod().Name & " EX: " & ex.Message, "IRC", _defaultUser)
