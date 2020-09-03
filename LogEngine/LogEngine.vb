@@ -352,8 +352,10 @@ Public Class LogEngine
                         IO.File.WriteAllLines(_LogPath, newarr)
                     End If
                     Return True
+                Catch f As FileNotFoundException
+                    Return False
                 Catch ex As Exception
-                    EX_Log(ex.Message, Reflection.MethodBase.GetCurrentMethod().Name, _defaultUser)
+                    Debug_Log(ex.Message, Reflection.MethodBase.GetCurrentMethod().Name, _defaultUser)
                     Return False
                 End Try
             End SyncLock
@@ -413,7 +415,7 @@ Public Class LogEngine
             End SyncLock
             Return True
         Catch ex As IO.IOException
-            Debug_Log(Reflection.MethodBase.GetCurrentMethod().Name & " EX: " & ex.Message, "IRC", _defaultUser)
+            Debug_Log(Reflection.MethodBase.GetCurrentMethod().Name & " EX: " & ex.Message, "Logger", _defaultUser)
             Return False
         End Try
     End Function
