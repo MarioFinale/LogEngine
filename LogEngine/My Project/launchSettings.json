@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LogEngine": {
+      "commandName": "Executable",
+      "executablePath": "..\\..\\Comp\\netcoreapp3.1\\PeriodiBOT-IRC.exe"
+    }
+  }
+}

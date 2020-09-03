@@ -145,7 +145,7 @@ Public Class LogEngine
     ''' <returns></returns>
     Public Function Log(ByVal message As String, ByVal source As String, ByVal user As String) As Boolean
         AddEvent(message, source, user, "LOG")
-        If _verbose Then WriteLine("LOG", source, user & ": " & message)
+        WriteLine("LOG", source, user & ": " & message)
         Return True
     End Function
 
